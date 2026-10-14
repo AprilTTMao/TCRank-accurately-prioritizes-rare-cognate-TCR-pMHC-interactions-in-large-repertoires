@@ -1,0 +1,11 @@
+# The epiTCR pickle was used with this legacy scientific stack locally.
+numpy==1.22.4
+pandas==1.4.3
+scipy==1.9.0
+scikit-learn==1.2.0
+imbalanced-learn==0.10.1
+joblib==1.5.3
+biopython==1.86
+matplotlib==3.5.2
+seaborn==0.11.2
+tqdm==4.64.0

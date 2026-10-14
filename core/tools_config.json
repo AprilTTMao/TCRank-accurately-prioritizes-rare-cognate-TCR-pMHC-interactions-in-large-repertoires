@@ -1,0 +1,195 @@
+{
+  "base_dir": ".",
+  "in_dir": "../inputfiles",
+  "out_dir": "../inputfiles/outputs",
+  "methods": [
+    {
+      "name": "PISTE",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/PISTE/PISTE-main/code",
+      "input_csv": "{in_dir}/PISTE_input.csv",
+      "output_path": "{out_dir}/PISTE_output.csv",
+      "cmd": "python predict.py --input \"{input_csv}\" --model_name unipep --threshold 0.5 --antigen_type MT --output \"{output_csv}\"",
+      "output_match": { "beta_col": "CDR3", "alpha_col": "", "peptide_col": "MT_pep", "mhc_col": "HLA_type" },
+      "pos_rule": { "column": "predicted_score", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "PanPep",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/PanPep-main",
+      "input_csv": "{in_dir}/Panpep_input.csv",
+      "output_path": "{out_dir}/panpep_output.csv",
+      "cmd": "python PanPep.py --learning_setting zero-shot --input \"{input_csv}\" --output \"{output_csv}\"",
+      "output_match": { "beta_col": "CDR3", "alpha_col": "", "peptide_col": "Peptide", "mhc_col": "" },
+      "pos_rule": { "column": "Score", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "pMTnet",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/pMTnet",
+      "input_csv": "{in_dir}/pMTnet_input.csv",
+      "output_path": "{out_dir}/pMTnet_output.csv",
+      "cmd": "python pMTnet.py -input \"{input_csv}\" -library library -output \"{output_csv}\" -output_log \"{out_dir}/pMTnet_output.log\"",
+      "output_match": { "beta_col": "CDR3", "alpha_col": "", "peptide_col": "Antigen", "mhc_col": "HLA" },
+      "pos_rule": { "column": "Rank", "threshold": 0.05, "positive_if": "lt" }
+    },
+
+    {
+      "name": "TEINet",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/TEINet-master",
+      "input_csv": "{in_dir}/TEINet_input.csv",
+      "output_path": "{out_dir}/TEINet_output.csv",
+      "cmd": "python predict.py --dset_path \"{input_csv}\" --model_path teinet_data.pth --use_column CDR3.beta --save_prediction_path \"{output_csv}\"",
+      "output_match": { "beta_col": "CDR3.beta", "alpha_col": "", "peptide_col": "Epitope", "mhc_col": "" },
+      "pos_rule": { "column": "pred_score", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "ERGO-II",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/ERGO-II-master",
+      "input_csv": "{in_dir}/ERGO-II_input.csv",
+      "output_path": "{out_dir}/ERGO-II_output.csv",
+      "cmd": "python Predict.py vdjdb \"{input_csv}\" \"{output_csv}\"",
+      "output_match": { "beta_col": "TRB", "alpha_col": "TRA", "peptide_col": "Peptide", "mhc_col": "MHC" },
+      "pos_rule": { "column": "Score", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "bertrand",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/bertrand-main",
+      "input_csv": "{in_dir}/bertrand_input.csv",
+      "output_path": "{out_dir}/bertrand_output.csv",
+      "cmd": "export KMP_DUPLICATE_LIB_OK=TRUE && python -m bertrand.model.inference -i \"{input_csv}\" -m best_checkpoint -o \"{output_csv}\"",
+      "output_match": { "beta_col": "CDR3b", "alpha_col": "", "peptide_col": "peptide_seq", "mhc_col": "" },
+      "pos_rule": { "column": "BERTrand", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "TEIM",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/TEIM-main",
+      "input_csv": "{in_dir}/TEIM_input.csv",
+      "output_path": "{out_dir}/TEIM_output.csv",
+      "cmd": "export PYTHONPATH=$PWD && python scripts/inference_seq.py -i \"{input_csv}\" -o \"{output_csv}\" --ckpt ckpt/teim_seq.ckpt --batch_size 256 --device cpu",
+      "output_match": { "beta_col": "cdr3", "alpha_col": "", "peptide_col": "epitope", "mhc_col": "" },
+      "pos_rule": { "column": "binding", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "ATM-TCR",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}",
+      "input_csv": "{in_dir}/ATM-TCR_input.csv",
+      "output_path": "{out_dir}/ATM-TCR_output.csv",
+      "cmd": "python runners/run_atmtcr.py --workdir \"{base_dir}/Predict_methods/ATM-TCR-main\" --input_csv \"{input_csv}\" --output_csv \"{output_csv}\" --model_name original.ckpt --batch_size 128",
+      "output_match": { "beta_col": "CDR3", "alpha_col": "", "peptide_col": "Peptide", "mhc_col": "" },
+      "pos_rule": { "column": "Score", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "ImRex",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/ImRex",
+      "input_csv": "{in_dir}/ImRex_input.csv",
+      "output_path": "{out_dir}/ImRex_output.csv",
+      "cmd": "export CUDA_VISIBLE_DEVICES=\"\" && export PYTHONPATH=\"$PWD\" && export MPLCONFIGDIR=\"{run_dir}/tmp/mpl\" && python src/scripts/predict/predict.py --model models/pretrained/2020-07-24_19-18-39_trbmhcidown-shuffle-padded-b32-lre4-reg001/2020-07-24_19-18-39_trbmhcidown-shuffle-padded-b32-lre4-reg001.h5 --input \"{input_csv}\" --output \"{output_csv}\"",
+      "output_match": { "beta_col": "cdr3", "alpha_col": "", "peptide_col": "antigen.epitope", "mhc_col": "" },
+      "pos_rule": { "column": "prediction_score", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "TEPCAM",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/TEPCAM",
+      "input_csv": "{in_dir}/TEPCAM_input.csv",
+      "output_path": "{out_dir}/TEPCAM_output.csv",
+      "cmd": "export MPLCONFIGDIR=\"{run_dir}/tmp/mpl\" && python scripts/test.py --file_path \"{input_csv}\" --model_path ckpts/tepcam_test.pt --output_file \"{output_csv}\" --metric_file \"{out_dir}/TEPCAM_metrics.txt\" --batch_size 128",
+      "output_match": { "beta_col": "tcr", "alpha_col": "", "peptide_col": "epitope", "mhc_col": "" },
+      "pos_rule": { "column": "prediction", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "TULIP",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}",
+      "input_csv": "{in_dir}/TULIP_input.csv",
+      "output_path": "{out_dir}/TULIP_output.csv",
+      "cmd": "python runners/run_tulip.py --workdir \"{base_dir}/Predict_methods/TULIP-TCR\" --input_csv \"{input_csv}\" --output_csv \"{output_csv}\" --modelconfig configs/shallow.config.json --load model_weights/pytorch_model.bin --batch_size 256",
+      "output_match": { "beta_col": "CDR3b", "alpha_col": "CDR3a", "peptide_col": "peptide", "mhc_col": "" },
+      "pos_rule": { "column": "rank_score", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "epiTCR",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform_oldversion",
+      "workdir": "{base_dir}/Predict_methods/epiTCR-main",
+      "input_csv": "{in_dir}/epiTCR_input.csv",
+      "output_path": "{out_dir}/epiTCR_output.csv",
+      "cmd": "python predict.py --testfile \"{input_csv}\" --modelfile models/rdforestWithMHCModel.pickle --outfile \"{output_csv}\" --chain cem",
+      "output_match": { "beta_col": "CDR3b", "alpha_col": "", "peptide_col": "epitope", "mhc_col": "HLA" },
+      "pos_rule": { "column": "predict_proba", "threshold": 0.8, "positive_if": "gt" }
+    },
+
+    {
+      "name": "NetTCR-2.2",
+      "allow_modes": ["vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/NetTCR-2.2-main",
+      "input_csv": "{in_dir}/NetTCR_input.csv",
+      "output_path": "{out_dir}/NetTCR_output.csv",
+      "cmd": "python src/predict.py --test_data \"{input_csv}\" --outdir models/nettcr_2_2_peptide --model_name \"t.1.v.2\" --model_type peptide --out_csv \"{output_csv}\"",
+      "output_match": { "beta_col": "B3", "alpha_col": "A3", "peptide_col": "peptide", "mhc_col": "allele" },
+      "pos_rule": { "column": "prediction", "threshold": 0.5, "positive_if": "gt" }
+    },
+
+    {
+      "name": "MixTCRpred",
+      "allow_modes": ["vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/MixTCRpred-main",
+      "input_csv": "{in_dir}/MixTCRpred_input.csv",
+      "plan_csv": "{in_dir}/MixTCRpred_plan.csv",
+      "output_path": "{out_dir}/MixTCRpred_output.csv",
+      "runner": "run_mixtcrpred",
+      "cmd": "python MixTCRpred.py --model {model} --input \"{input_csv}\" --output \"{output_csv}\"",
+      "models_dir": "{base_dir}/Predict_methods/MixTCRpred-main/models",
+      "info_models_csv": "{base_dir}/Predict_methods/MixTCRpred-main/info_models.csv",
+      "output_match": {
+          "beta_col": "cdr3_TRB",
+          "alpha_col": "cdr3_TRA",
+          "peptide_col": "peptide",
+          "mhc_col": "HLA"
+        },
+      "pos_rule": { "column": "perc_rank", "threshold": 0.05, "positive_if": "lt" }
+    },
+
+    {
+      "name": "iTCep",
+      "allow_modes": ["cdr3", "vregion"],
+      "env": "TCR-PEP_Platform",
+      "workdir": "{base_dir}/Predict_methods/iTCep-master",
+      "input_csv": "{in_dir}/iTCep_input.csv",
+      "output_path": "{out_dir}/iTCep_output.csv",
+      "cmd": "python predict.py --input \"{input_csv}\" --output \"{output_csv}\"",
+      "output_match": { "beta_col": "CDR3", "alpha_col": "", "peptide_col": "Peptide", "mhc_col": "MHC" },
+      "pos_rule": { "column": "Probability", "threshold": 0.5, "positive_if": "gt" }
+    }
+  ]
+}

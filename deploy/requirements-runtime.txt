@@ -1,0 +1,36 @@
+# Python 3.10; CPU torch/torchvision are installed from the official CPU index.
+# NumPy 1.26.4 satisfies Linux TensorFlow 2.18's declared constraints.
+numpy==1.26.4
+pandas==2.3.3
+scipy==1.15.2
+scikit-learn==1.7.2
+tensorflow-cpu==2.18.0
+keras==3.12.0
+h5py==3.15.1
+protobuf==5.28.3
+tensorboard==2.18.0
+torch==2.9.1+cpu
+torchvision==0.24.1+cpu
+pytorch-lightning==1.5.10.post0
+torchmetrics==1.8.2
+setuptools==59.5.0
+pyDeprecate==0.3.1
+future==1.0.0
+transformers==4.37.2
+tokenizers==0.15.2
+accelerate==0.27.2
+fsspec[http]==2023.10.0
+biopython==1.86
+matplotlib==3.10.8
+seaborn==0.13.2
+joblib==1.5.3
+easydict==1.13
+PyYAML==6.0.3
+tqdm==4.67.1
+Levenshtein==0.27.3
+pyteomics==4.7.5
+networkx==3.4.2
+natsort==8.4.0
+tabulate==0.9.0
+wget==3.2
+tensorboardX==2.6.2.2
