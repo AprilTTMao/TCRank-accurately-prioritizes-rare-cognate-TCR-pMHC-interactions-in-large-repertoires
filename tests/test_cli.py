@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from openpyxl import load_workbook
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from TCR_run import ARCHIVE, image_parts, main, mode_name, mount_arg, read_input, select_methods
@@ -144,12 +146,58 @@ class ExportTests(unittest.TestCase):
     def result(self):
         return {
             "ranking_rows": [
-                {"pair_id": 0, "group_id": "A", "final_score": 0.0, "available_method_count": 0},
-                {"pair_id": 1, "group_id": "A", "final_score": 1.2, "available_method_count": 1},
+                self.ranking_row(0, available_method_count=0, final_score=0.0),
+                self.ranking_row(1),
             ],
             "method_level_rows": [{"pair_id": 1, "method": "PanPep", "raw_score": 0.5}],
             "failed_methods": {},
         }
+
+    def ranking_row(self, pair_id, peptide="GILGFVFTL", mhc="HLA-A*02:01", **changes):
+        row = {
+            "pair_id": pair_id, "group_id": peptide + "|" + mhc,
+            "Peptide": peptide, "MHC": mhc,
+            "alphaCDR3": "CAVRDSNYQLIW", "betaCDR3": "CASSIRSSYEQYF",
+            "final_score": 1.2, "available_method_count": 1,
+            "selected_method_count": 1, "pmhc_group_size": 2,
+        }
+        row.update(changes)
+        return row
+
+    def assert_excel_matches_csv(self, destination):
+        with (destination / "ranking.csv").open() as handle:
+            reader = csv.DictReader(handle)
+            fields = reader.fieldnames
+            csv_rows = list(reader)
+        workbook = load_workbook(destination / "ranking.xlsx")
+        try:
+            expected_groups = {}
+            for row in csv_rows:
+                expected_groups.setdefault((row["Peptide"], row["MHC"]), []).append(row)
+            self.assertEqual(len(workbook.worksheets), len(expected_groups))
+            seen_groups = set()
+            for sheet in workbook:
+                table = list(sheet.values)
+                self.assertEqual(list(table[0]), fields)
+                data = [dict(zip(fields, values)) for values in table[1:]]
+                key = (data[0]["Peptide"], data[0]["MHC"])
+                self.assertNotIn(key, seen_groups)
+                seen_groups.add(key)
+                expected = expected_groups[key]
+                self.assertEqual(len(data), len(expected))
+                for actual_row, expected_row in zip(data, expected):
+                    for field in fields:
+                        actual = actual_row[field]
+                        if field == "final_score" and expected_row[field]:
+                            self.assertAlmostEqual(actual, float(expected_row[field]))
+                        else:
+                            self.assertEqual("" if actual is None else str(actual), expected_row[field])
+                self.assertEqual(sheet.freeze_panes, "A2")
+                self.assertEqual(sheet.auto_filter.ref, sheet.dimensions)
+            self.assertEqual(seen_groups, set(expected_groups))
+            return workbook.sheetnames
+        finally:
+            workbook.close()
 
     def test_unscored_not_ranked(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -163,6 +211,77 @@ class ExportTests(unittest.TestCase):
             self.assertEqual(rows[1]["ranking_status"], "no_prediction")
             self.assertTrue((destination / "predictor_scores.csv").is_file())
             self.assertEqual(json.loads((destination / "summary.json").read_text())["unscored_candidates"], 1)
+            self.assertEqual(self.assert_excel_matches_csv(destination), ["GILGFVFTL_A0201"])
+
+    def test_excel_keeps_pairs_with_shared_sequences_and_sorts_each_target(self):
+        result = self.result()
+        result["ranking_rows"] = [
+            self.ranking_row(0, final_score=1.0, pmhc_group_size=4),
+            self.ranking_row(1, "GLCTLVAML", pmhc_group_size=1),
+            self.ranking_row(2, mhc="HLA-A*24:02", pmhc_group_size=1),
+            self.ranking_row(3, alphaCDR3="CAMSAIMNRDDKIIF", final_score=2.0, pmhc_group_size=4),
+            self.ranking_row(4, final_score=1.0, pmhc_group_size=4),
+            self.ranking_row(5, available_method_count=0, pmhc_group_size=4),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            container_cli.export_results(result, destination, "cdr3", ["PanPep"], 1)
+            self.assertEqual(self.assert_excel_matches_csv(destination),
+                             ["GILGFVFTL_A0201", "GILGFVFTL_A2402", "GLCTLVAML_A0201"])
+            with (destination / "ranking.csv").open() as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual([r["input_row"] for r in rows[:4]], ["4", "1", "5", "6"])
+            self.assertEqual([r["pmhc_rank"] for r in rows[:4]], ["1", "2", "3", ""])
+            self.assertCountEqual([r["input_row"] for r in rows], [str(i) for i in range(1, 7)])
+
+    def test_excel_vregion_has_same_sequence_columns_as_csv(self):
+        result = self.result()
+        for row in result["ranking_rows"]:
+            row.update(betaCDR1="SGHAT", betaCDR2="FQNEAQ", alphaCDR1="TSINN", alphaCDR2="IRSNERE")
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            container_cli.export_results(result, destination, "vregion", ["PanPep"], 1)
+            self.assert_excel_matches_csv(destination)
+            workbook = load_workbook(destination / "ranking.xlsx")
+            try:
+                header = next(workbook.active.values)
+                self.assertEqual(list(header[3:9]),
+                                 ["betaCDR1", "betaCDR2", "betaCDR3", "alphaCDR1", "alphaCDR2", "alphaCDR3"])
+            finally:
+                workbook.close()
+
+    def test_excel_long_sheet_names_do_not_merge_targets(self):
+        result = self.result()
+        result["ranking_rows"] = [self.ranking_row(0, "A" * 40 + "G"), self.ranking_row(1, "A" * 40 + "L")]
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            container_cli.export_results(result, destination, "cdr3", ["PanPep"], 1)
+            names = self.assert_excel_matches_csv(destination)
+            self.assertEqual(len(set(names)), 2)
+            self.assertTrue(all(len(name) <= 31 for name in names))
+            self.assertTrue(names[1].endswith("_2"))
+
+    def test_sheet_names_remove_invalid_characters_and_avoid_case_collisions(self):
+        names = set()
+        first = container_cli.target_sheet_name("GILGFVFTL", "HLA-A*02:01", names)
+        second = container_cli.target_sheet_name("gilgfvftl", "HLA-A*02:01", names)
+        other = container_cli.target_sheet_name("A/B?C[D]", "HLA-A*02:01", names)
+        self.assertEqual(first, "GILGFVFTL_A0201")
+        self.assertEqual(second, "gilgfvftl_A0201_2")
+        for name in (first, second, other):
+            self.assertNotRegex(name, r"[\\/*?:\[\]]")
+
+    def test_excel_all_unscored_rows_retained(self):
+        result = self.result()
+        result["method_level_rows"] = []
+        for row in result["ranking_rows"]:
+            row["available_method_count"] = 0
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            summary = container_cli.export_results(result, destination, "cdr3", ["PanPep"], 1)
+            self.assertEqual(summary["status"], "failed")
+            self.assertEqual(summary["unscored_candidates"], 2)
+            self.assert_excel_matches_csv(destination)
 
     def test_no_usable_method_flagged(self):
         with tempfile.TemporaryDirectory() as directory:

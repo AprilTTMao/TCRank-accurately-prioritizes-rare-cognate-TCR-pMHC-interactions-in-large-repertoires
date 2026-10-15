@@ -35,6 +35,7 @@ Provide amino acid sequences and two-field human class-I HLA alleles, e.g. `HLA-
 
 ## Output
 
-- `ranking.csv`: candidate scores and ranks within each peptide-HLA target.
+- `ranking.csv`: all candidate pairs, with TCR sequences, peptide, HLA, scores and within-target ranks.
+- `ranking.xlsx`: the same columns and results, with one sheet per peptide-HLA target (e.g. `GILGFVFTL_A0201`), ordered by rank. Full peptide and HLA values remain in the table.
 - `predictor_scores.csv`: predictions from the selected tools.
 - `summary.json`: run status and any unavailable predictions.

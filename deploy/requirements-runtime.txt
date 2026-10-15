@@ -2,6 +2,7 @@
 # NumPy 1.26.4 satisfies Linux TensorFlow 2.18's declared constraints.
 numpy==1.26.4
 pandas==2.3.3
+openpyxl==3.1.5
 scipy==1.15.2
 scikit-learn==1.7.2
 tensorflow-cpu==2.18.0

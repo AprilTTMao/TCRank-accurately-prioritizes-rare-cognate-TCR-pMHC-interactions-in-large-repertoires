@@ -7,7 +7,7 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument('--imports-only', action='store_true')
 parser.parse_args()
-for module in ['numpy', 'pandas', 'scipy', 'sklearn', 'Bio', 'anarci', 'torch', 'torchvision', 'tensorflow', 'keras', 'pytorch_lightning', 'transformers', 'accelerate', 'Levenshtein', 'pyteomics', 'easydict', 'wget']:
+for module in ['numpy', 'pandas', 'openpyxl', 'scipy', 'sklearn', 'Bio', 'anarci', 'torch', 'torchvision', 'tensorflow', 'keras', 'pytorch_lightning', 'transformers', 'accelerate', 'Levenshtein', 'pyteomics', 'easydict', 'wget']:
     importlib.import_module(module)
     print('OK', module, flush=True)
 import torch

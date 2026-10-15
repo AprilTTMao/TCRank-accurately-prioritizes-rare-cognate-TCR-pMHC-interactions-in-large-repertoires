@@ -14,8 +14,8 @@ import sys
 import uuid
 
 ROOT = Path(__file__).resolve().parent
-IMAGE = "tcrank-cli:cpu-20261014"
-ARCHIVE = "tcrank-cli-cpu-20261014.tar.gz"
+IMAGE = "tcrank-cli:cpu-20261015"
+ARCHIVE = "tcrank-cli-cpu-20261015.tar.gz"
 AA = set("ACDEFGHIKLMNPQRSTVWY")
 
 

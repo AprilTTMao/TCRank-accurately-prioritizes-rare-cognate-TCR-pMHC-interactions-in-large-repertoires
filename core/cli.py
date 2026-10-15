@@ -6,6 +6,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
@@ -32,6 +33,55 @@ def write_csv(path, rows, fields):
         writer.writerows(rows)
 
 
+def target_sheet_name(peptide, mhc, used_names):
+    label = str(peptide or "") + "_" + str(mhc or "").removeprefix("HLA-")
+    label = re.sub(r"[\\/*?:\[\]]", "", label).strip("'_") or "target"
+    name = label[:31].rstrip("'")
+    number = 2
+    while name.casefold() in used_names:
+        suffix = "_" + str(number)
+        name = label[:31 - len(suffix)] + suffix
+        number += 1
+    used_names.add(name.casefold())
+    return name
+
+
+def write_ranking_excel(path, rows, fields):
+    from openpyxl import Workbook
+    from openpyxl.cell import WriteOnlyCell
+    from openpyxl.styles import Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    groups = {}
+    for row in rows:
+        groups.setdefault((row.get("Peptide", ""), row.get("MHC", "")), []).append(row)
+    if any(len(group) > 1048575 for group in groups.values()):
+        raise ValueError("A peptide-HLA group exceeds Excel's row limit; ranking.csv contains the full results.")
+
+    workbook = Workbook(write_only=True)
+    names = set()
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(fill_type="solid", fgColor="404040")
+    for (peptide, mhc), group in groups.items():
+        sheet = workbook.create_sheet(target_sheet_name(peptide, mhc, names))
+        sheet.freeze_panes = "A2"
+        sheet.sheet_view.showGridLines = False
+        header = []
+        for index, field in enumerate(fields, 1):
+            width = max(len(field), max(len(str(row.get(field) or "")) for row in group)) + 2
+            sheet.column_dimensions[get_column_letter(index)].width = min(60, max(12, width))
+            cell = WriteOnlyCell(sheet, value=field)
+            cell.font = header_font
+            cell.fill = header_fill
+            header.append(cell)
+        sheet.append(header)
+        # Group rows retain exactly the ordering and columns exported to the CSV.
+        for row in group:
+            sheet.append([row.get(field) for field in fields])
+        sheet.auto_filter.ref = "A1:{}{}".format(get_column_letter(len(fields)), len(group) + 1)
+    workbook.save(path)
+
+
 def export_results(result, destination, mode, methods, elapsed):
     rows = [dict(row) for row in result["ranking_rows"]]
     unscored = 0
@@ -56,6 +106,7 @@ def export_results(result, destination, mode, methods, elapsed):
     rank_fields = ["input_row", "Peptide", "MHC", *sequence_fields, "pmhc_rank", "pmhc_group_size",
                    "final_score", "available_method_count", "selected_method_count", "ranking_status"]
     write_csv(destination / "ranking.csv", rows, rank_fields)
+    write_ranking_excel(destination / "ranking.xlsx", rows, rank_fields)
     details = [dict(row, input_row=int(row["pair_id"]) + 1) for row in result["method_level_rows"]]
     detail_fields = ["input_row", "Peptide", "MHC", *sequence_fields, "method", "availability",
                      "raw_score", "oriented_score", "empirical_p", "evidence", "rank_within_pmhc", "missing_reason"]
