@@ -31,11 +31,11 @@ Replace the example CSV with your input file. To select predictors, replace `all
 | CDR3 | `beta_cdr3,alpha_cdr3,peptide,mhc` (alpha is optional) |
 | V region | `beta_v,alpha_v,peptide,mhc` (both chains required) |
 
-Provide amino acid sequences and two-field human class-I HLA alleles, e.g. `HLA-A*02:01`.
+Provide amino acid sequences and human class-I HLA alleles in the format `HLA-A*02:01`.
 
 ## Output
 
 - `ranking.csv`: all candidate pairs, with TCR sequences, peptide, HLA, scores and within-target ranks.
-- `ranking.xlsx`: the same columns and results, with one sheet per peptide-HLA target (e.g. `GILGFVFTL_A0201`), ordered by rank. Full peptide and HLA values remain in the table.
+- `ranking.xlsx`: the same columns and results, with one sheet per peptide-HLA target (e.g. `GILGFVFTL_A0201`), ordered by rank.
 - `predictor_scores.csv`: predictions from the selected tools.
 - `summary.json`: run status and any unavailable predictions.
